@@ -1,0 +1,161 @@
+<div class="grid grid-cols-12 gap-6">
+  <!-- Left panel -->
+  <div class="col-span-12 lg:col-span-5">
+    <div class="rounded-2xl border bg-white p-6 shadow-sm">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-xl font-semibold">Upload Receipt</h2>
+
+        <button class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white" (click)="openCameraPage()">
+          Upload / Scan Receipt
+        </button>
+      </div>
+
+      <div class="rounded-xl border border-dashed p-6 text-center">
+        <p class="mb-3 text-sm text-gray-500">Drag & drop or</p>
+
+        <div class="flex flex-wrap justify-center gap-3">
+          <label class="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-white">
+            Upload Image / PDF (Max 10)
+            <input type="file" class="hidden" accept="image/*,application/pdf" multiple (change)="onFiles($event)"
+              [disabled]="items.length >= MAX_ITEMS" />
+          </label>
+
+          <button class="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-50" (click)="openCameraPage()"
+            [disabled]="items.length >= MAX_ITEMS">
+            Use Camera
+          </button>
+        </div>
+
+        <p class="mt-2 text-xs text-gray-500">
+          {{ items.length }} / {{ MAX_ITEMS }} files
+        </p>
+
+        <p *ngIf="limitMsg" class="mt-1 text-xs text-red-600">
+          {{ limitMsg }}
+        </p>
+        <details *ngIf="skippedNames.length > 0" class="mt-2 text-xs text-amber-600">
+          <summary class="cursor-pointer font-medium">
+            {{ skippedNames.length }} file(s) skipped (max {{ MAX_ITEMS }})
+          </summary>
+          <ul class="mt-1 list-disc pl-5">
+            <li *ngFor="let n of skippedNames">{{ n }}</li>
+          </ul>
+        </details>
+
+      </div>
+
+      <div class="mt-4 space-y-3">
+        <label class="flex items-center justify-between">
+          <span class="text-sm">Remove Background</span>
+          <input type="checkbox" class="h-5 w-5" [(ngModel)]="removeBg" />
+        </label>
+
+        <label class="flex items-center justify-between">
+          <span class="text-sm">Deskew Image</span>
+          <input type="checkbox" class="h-5 w-5" [(ngModel)]="deskew" />
+        </label>
+      </div>
+      <!-- Loading bar -->
+      <div *ngIf="isProcessing" class="mt-4">
+        <div class="mb-2 flex items-center justify-between">
+          <p class="text-sm text-gray-600">Processing receipts…</p>
+          <p class="text-xs text-gray-500">{{ progressLabel }}</p>
+        </div>
+
+        <!-- Indeterminate bar -->
+        <div class="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+          <div class="h-full w-1/2 animate-pulse rounded-full bg-blue-600"></div>
+        </div>
+      </div>
+
+      <button class="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white disabled:opacity-50"
+        [disabled]="items.length === 0 || isProcessing" (click)="runExtraction()">
+        {{ isProcessing ? 'Processing…' : ('Run Extraction (' + items.length + ')') }}
+      </button>
+
+
+      <button class="mt-3 w-full rounded-lg border px-4 py-2 disabled:opacity-50"
+        [disabled]="items.length === 0 || isProcessing" (click)="clearAll()">
+        Clear All
+      </button>
+
+    </div>
+
+    <!-- List -->
+    <div class="mt-4 rounded-2xl border bg-white p-4 shadow-sm" *ngIf="items.length > 0">
+      <div class="mb-2 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-gray-700">Batch List</h3>
+        <span class="text-xs text-gray-500">{{ items.length }} items</span>
+      </div>
+
+      <div class="max-h-72 overflow-auto space-y-2">
+        <button type="button" class="flex w-full items-center gap-3 rounded-lg border p-2 text-left hover:bg-gray-50"
+          *ngFor="let it of items" (click)="select(it.id)" [class.ring-2]="it.id === selectedId"
+          [class.ring-blue-500]="it.id === selectedId">
+          <ng-container *ngIf="it.kind === 'image'; else pdfThumb">
+            <img [src]="it.previewUrl" class="h-14 w-12 rounded object-cover border" />
+          </ng-container>
+
+          <ng-template #pdfThumb>
+            <div class="flex h-14 w-12 items-center justify-center rounded border bg-gray-100 text-xs text-gray-600">
+              PDF
+            </div>
+          </ng-template>
+
+          <div class="flex-1">
+            <div class="text-xs font-semibold text-gray-800">
+              {{ it.source === 'camera' ? 'Camera' : 'Upload' }} • {{ it.kind | uppercase }}
+            </div>
+            <div class="text-[11px] text-gray-500">
+              {{ it.name }}
+            </div>
+          </div>
+
+          <button type="button" class="rounded-lg border px-3 py-1 text-xs text-red-600 hover:bg-red-50"
+            (click)="remove(it.id); $event.stopPropagation()">
+            Remove
+          </button>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel preview -->
+  <div class="col-span-12 lg:col-span-7">
+    <div class="rounded-2xl border bg-white p-6 shadow-sm">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-xl font-semibold">Preview</h2>
+
+        <button *ngIf="selectedId" class="rounded-lg border px-3 py-1 text-sm text-red-600 hover:bg-red-50"
+          (click)="remove(selectedId!)">
+          Remove Selected
+        </button>
+      </div>
+
+      <div class="aspect-[4/5] w-full overflow-hidden rounded-xl border bg-gray-50">
+        <ng-container *ngIf="selectedItem; else emptyState">
+          <!-- Image preview -->
+          <img *ngIf="selectedItem.kind === 'image'" [src]="selectedItem.previewUrl"
+            class="h-full w-full object-contain" />
+
+          <!-- PDF preview placeholder (frontend only) -->
+          <div *ngIf="selectedItem.kind === 'pdf'"
+            class="flex h-full flex-col items-center justify-center gap-2 text-sm text-gray-500">
+            <div class="text-lg font-semibold">PDF Selected</div>
+            <div class="text-xs text-gray-400">
+              Preview rendering needs pdf.js (optional). You can still send PDF to backend.
+            </div>
+          </div>
+        </ng-container>
+
+        <ng-template #emptyState>
+          <div class="flex h-full items-center justify-center text-sm text-gray-400">
+            No image yet. Upload or use camera.
+          </div>
+        </ng-template>
+      </div>
+
+      <p *ngIf="statusMsg" class="mt-3 text-xs text-gray-500">{{ statusMsg }}</p>
+    </div>
+  </div>
+</div>

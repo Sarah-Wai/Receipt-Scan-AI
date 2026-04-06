@@ -1,0 +1,756 @@
+<!-- receipt-detail.component.html -->
+
+<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+  <div class="flex flex-wrap items-center gap-2">
+    <button
+      class="inline-flex items-center gap-1.5 rounded-lg bg-white/70 px-3 py-1.5 text-sm font-medium text-gray-700
+             shadow-sm ring-1 ring-gray-200/50 hover:bg-white/90
+             focus:outline-none focus:ring-2 focus:ring-brand-500/20
+             dark:bg-white/[0.02] dark:text-gray-200 dark:ring-white/[0.08] dark:hover:bg-white/[0.04]"
+      (click)="back()"
+    >
+      <span class="text-base leading-none">←</span>
+      <span>Back</span>
+    </button>
+
+    <span class="hidden h-4 w-px bg-gray-200/60 dark:bg-white/[0.08] sm:block"></span>
+
+    <span
+      class="rounded-full bg-white/70 px-3 py-1 text-xs font-medium text-gray-500
+             ring-1 ring-gray-200/40
+             dark:bg-white/[0.02] dark:text-gray-400 dark:ring-white/[0.08]"
+    >
+      ID&nbsp;<span class="font-semibold text-gray-800 dark:text-white/90">{{ receiptId }}</span>
+    </span>
+
+    <span
+      class="rounded-full px-3 py-1 text-xs font-semibold ring-1"
+      [ngClass]="{
+        'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20':
+          status === 'Processed',
+        'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20':
+          status === 'Pending',
+        'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20':
+          status === 'Failed',
+        'bg-orange-50 text-orange-700 ring-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-500/20':
+          status === 'Error',
+        'bg-white/70 text-gray-600 ring-gray-200/40 dark:bg-white/[0.02] dark:text-gray-400 dark:ring-white/[0.08]':
+          status !== 'Processed' && status !== 'Pending' && status !== 'Failed' && status !== 'Error'
+      }"
+    >
+      {{ status }}
+    </span>
+
+    <span
+      class="rounded-full px-3 py-1 text-xs font-semibold ring-1
+             bg-violet-50 text-violet-700 ring-violet-200
+             dark:bg-violet-500/10 dark:text-violet-400 dark:ring-violet-500/20"
+    >
+      {{ sourceBadge }}
+    </span>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2">
+    <button
+      class="inline-flex items-center gap-1.5 rounded-lg bg-white/70 px-3 py-1.5 text-sm font-medium text-gray-700
+             shadow-sm ring-1 ring-gray-200/50 hover:bg-white/90
+             focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-40
+             dark:bg-white/[0.02] dark:text-gray-200 dark:ring-white/[0.08] dark:hover:bg-white/[0.04]"
+      (click)="prevReceipt()"
+      [disabled]="!canPrev"
+    >
+      <span class="text-base leading-none">←</span>
+      <span>Prev</span>
+    </button>
+
+    <div class="min-w-[160px] text-center">
+      <div class="text-sm font-semibold text-gray-800 dark:text-white/90">{{ receiptName }}</div>
+    </div>
+
+    <button
+      class="inline-flex items-center gap-1.5 rounded-lg bg-white/70 px-3 py-1.5 text-sm font-medium text-gray-700
+             shadow-sm ring-1 ring-gray-200/50 hover:bg-white/90
+             focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-40
+             dark:bg-white/[0.02] dark:text-gray-200 dark:ring-white/[0.08] dark:hover:bg-white/[0.04]"
+      (click)="nextReceipt()"
+      [disabled]="!canNext"
+    >
+      <span>Next</span>
+      <span class="text-base leading-none">→</span>
+    </button>
+  </div>
+</div>
+
+<div
+  class="rounded-2xl bg-white/70 p-3 shadow-sm ring-1 ring-gray-200/50
+         dark:bg-white/[0.02] dark:ring-white/[0.06]"
+>
+  <div
+    class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200/40 pb-3
+           dark:border-white/[0.06]"
+  >
+    <div class="text-xs">
+      <span
+        *ngIf="validationSkipped"
+        class="font-medium text-violet-700 dark:text-violet-300"
+      >
+        Pending LLM review: validation hidden until approve or reject.
+      </span>
+
+      <span
+        *ngIf="!validationSkipped"
+        class="text-gray-500 dark:text-gray-400"
+      >
+        Review items, adjust summary, then approve or flag.
+      </span>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2
+               text-sm font-semibold text-white shadow-sm
+               hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400
+               disabled:opacity-50"
+        [disabled]="approving"
+        (click)="approve()"
+      >
+        {{ approving ? 'Approving…' : 'Approve' }}
+      </button>
+
+      <button
+        *ngIf="canRejectLlm"
+        class="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-4 py-2
+               text-sm font-semibold text-rose-700 shadow-sm
+               hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-300
+               disabled:opacity-50
+               dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/15"
+        [disabled]="rejecting"
+        (click)="rejectPendingLlm()"
+      >
+        {{ rejecting ? 'Rejecting…' : 'Reject LLM' }}
+      </button>
+
+      <div class="hidden h-6 w-px bg-gray-200/60 dark:bg-white/[0.08] sm:block"></div>
+
+      <button
+        class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5
+               text-xs font-semibold text-red-700 shadow-sm
+               hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300
+               dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15"
+        (click)="WrongExtraction()"
+      >
+        ✕ Failed Extraction
+      </button>
+
+      <button
+        class="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5
+               text-xs font-semibold text-orange-700 shadow-sm
+               hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-300
+               dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400 dark:hover:bg-orange-500/15"
+        (click)="ErrorLayout()"
+      >
+        ⚠ Error
+      </button>
+
+      <div class="hidden h-6 w-px bg-gray-200/60 dark:bg-white/[0.08] sm:block"></div>
+
+      <button
+        class="inline-flex items-center justify-center rounded-lg bg-white/70 px-3 py-1.5
+               text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200/50
+               hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-50
+               dark:bg-white/[0.02] dark:text-gray-200 dark:ring-white/[0.08] dark:hover:bg-white/[0.04]"
+        [disabled]="exporting"
+        (click)="exportJson()"
+      >
+        ↓ JSON
+      </button>
+
+      <button
+        class="inline-flex items-center justify-center rounded-lg bg-white/70 px-3 py-1.5
+               text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200/50
+               hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-50
+               dark:bg-white/[0.02] dark:text-gray-200 dark:ring-white/[0.08] dark:hover:bg-white/[0.04]"
+        [disabled]="exporting"
+        (click)="exportCsv()"
+      >
+        ↓ CSV
+      </button>
+    </div>
+  </div>
+
+  <div
+    class="mt-3 flex w-full gap-0 overflow-hidden rounded-2xl bg-transparent
+           ring-1 ring-gray-200/40 dark:ring-white/[0.06]"
+    [style.--leftW.px]="leftW"
+    [style.--rightW.px]="rightW"
+  >
+    <!-- LEFT -->
+    <div class="min-w-[240px] max-w-[560px] w-[var(--leftW)] shrink-0 bg-transparent">
+      <div class="p-3">
+        <div
+          class="rounded-2xl bg-white/70 p-3 ring-1 ring-gray-200/40
+                 dark:bg-white/[0.02] dark:ring-white/[0.06]"
+        >
+          <div class="mb-2 flex items-center justify-between">
+            <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">Receipt Image</div>
+            <div class="text-xs text-gray-400 dark:text-gray-500">{{ (zoom * 100) | number:'1.0-0' }}%</div>
+          </div>
+
+          <div
+            class="aspect-[3/5] overflow-auto rounded-2xl bg-white/80 ring-1 ring-gray-200/40
+                   dark:bg-black/20 dark:ring-white/[0.06]"
+          >
+            <div
+              class="flex justify-center p-2"
+              [style.transform]="'scale(' + zoom + ')'"
+              [style.transformOrigin]="'top center'"
+            >
+              <img
+                [src]="'http://localhost:8000' + receiptImageUrl"
+                class="block h-auto max-w-full select-none"
+                alt="Receipt image"
+                draggable="false"
+              />
+            </div>
+          </div>
+
+          <div class="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>Zoom</span>
+            <div class="flex items-center gap-2">
+              <button
+                class="flex h-7 w-7 items-center justify-center rounded-md bg-white/70 text-sm
+                       ring-1 ring-gray-200/50 hover:bg-white/90
+                       focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-40
+                       dark:bg-white/[0.02] dark:ring-white/[0.08]"
+                (click)="zoomOut()"
+                [disabled]="zoom <= minZoom"
+                aria-label="Zoom out"
+              >−</button>
+
+              <span class="min-w-[44px] text-center font-medium text-gray-700 dark:text-gray-200">
+                {{ (zoom * 100) | number:'1.0-0' }}%
+              </span>
+
+              <button
+                class="flex h-7 w-7 items-center justify-center rounded-md bg-white/70 text-sm
+                       ring-1 ring-gray-200/50 hover:bg-white/90
+                       focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:opacity-40
+                       dark:bg-white/[0.02] dark:ring-white/[0.08]"
+                (click)="zoomIn()"
+                [disabled]="zoom >= maxZoom"
+                aria-label="Zoom in"
+              >+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="w-1.5 cursor-col-resize bg-gray-200/30 hover:bg-gray-300/50
+             dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+      (pointerdown)="startDrag($event, 'left')"
+      title="Drag to resize"
+    ></div>
+
+    <!-- MIDDLE -->
+    <div class="min-w-[420px] flex-1 overflow-hidden bg-transparent">
+      <div class="p-3">
+        <div
+          class="rounded-2xl bg-white/70 ring-1 ring-gray-200/40
+                 dark:bg-white/[0.02] dark:ring-white/[0.06]"
+        >
+          <div
+            class="flex items-center justify-between border-b border-gray-200/40 px-4 py-2
+                   dark:border-white/[0.06]"
+          >
+            <div class="flex gap-1">
+              <button
+                class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                [ngClass]="activeTab === 'items'
+                  ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                (click)="activeTab = 'items'"
+              >
+                Items
+              </button>
+
+              <button
+                class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                [ngClass]="activeTab === 'ocr'
+                  ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                (click)="activeTab = 'ocr'"
+              >
+                Raw OCR
+              </button>
+
+              <button
+                class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                [ngClass]="activeTab === 'prediction'
+                  ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                (click)="activeTab = 'prediction'"
+              >
+                Model Predictions
+              </button>
+
+              <button
+                *ngIf="showValidationTab"
+                class="rounded-md px-3 py-1.5 text-sm font-semibold transition-colors"
+                [ngClass]="activeTab === 'validation'
+                  ? 'bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
+                (click)="activeTab = 'validation'"
+              >
+                Validation
+              </button>
+            </div>
+
+            <div class="hidden text-xs text-gray-400 dark:text-gray-500 sm:block">
+              Tip: edit fields; totals update automatically.
+            </div>
+          </div>
+
+          <!-- ITEMS -->
+          <div *ngIf="activeTab === 'items'" class="p-3">
+            <div
+              class="max-h-[66vh] overflow-auto rounded-2xl bg-white/80 ring-1 ring-gray-200/40
+                     dark:bg-white/[0.01] dark:ring-white/[0.06]"
+            >
+              <table class="min-w-full table-fixed text-sm">
+                <thead
+                  class="sticky top-0 z-10 border-b border-gray-200/50 bg-gray-50/90 backdrop-blur
+                         text-[11px] uppercase tracking-wide text-gray-500
+                         dark:border-white/[0.08] dark:bg-black/20 dark:text-gray-400"
+                >
+                  <tr>
+                    <th class="w-[42%] px-3 py-3 text-left font-semibold">Item Name</th>
+                    <th class="w-[9%] px-2 py-3 text-center font-semibold">Cur.</th>
+                    <th class="w-[16%] px-3 py-3 text-right font-semibold">Unit Price</th>
+                    <th class="w-[10%] px-2 py-3 text-center font-semibold" title="AI confidence score">Conf.</th>
+                    <th class="w-[16%] px-2 py-3 text-center font-semibold">Status</th>
+                    <th class="w-[7%] px-3 py-3 text-right font-semibold">Del.</th>
+                  </tr>
+                </thead>
+
+                <tbody class="divide-y divide-gray-200/40 bg-transparent dark:divide-white/[0.06]">
+                  <tr
+                    *ngFor="let it of items; trackBy: trackByItemId"
+                    class="odd:bg-white/40 even:bg-white/60 hover:bg-gray-50/60
+                           dark:odd:bg-white/[0.01] dark:even:bg-white/[0.02] dark:hover:bg-white/[0.04]"
+                  >
+                    <td class="px-3 py-1.5 align-middle">
+                      <input
+                        class="w-full rounded-lg bg-transparent px-2.5 py-1.5 text-gray-800
+                               ring-1 ring-transparent
+                               hover:bg-white/60 hover:ring-gray-200/60
+                               focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                               disabled:cursor-not-allowed disabled:opacity-70
+                               dark:text-white/90 dark:hover:bg-white/[0.03] dark:hover:ring-white/[0.10] dark:focus:bg-white/[0.03]"
+                        [(ngModel)]="it.name"
+                        [ngModelOptions]="{standalone:true}"
+                        [attr.name]="'item_name_' + it.id"
+                        [readonly]="isProcessed"
+                        placeholder="Item name"
+                      />
+                    </td>
+
+                    <td class="px-2 py-1.5 align-middle">
+                      <input
+                        type="text"
+                        maxlength="3"
+                        class="mx-auto block w-14 rounded-lg bg-transparent px-1.5 py-1.5 text-center
+                               text-xs font-semibold uppercase tracking-wide text-gray-800
+                               ring-1 ring-transparent
+                               hover:bg-white/60 hover:ring-gray-200/60
+                               focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                               disabled:cursor-not-allowed disabled:opacity-70
+                               dark:text-white/90 dark:hover:bg-white/[0.03] dark:hover:ring-white/[0.10] dark:focus:bg-white/[0.03]"
+                        [(ngModel)]="it.currency"
+                        [ngModelOptions]="{standalone:true}"
+                        [attr.name]="'item_currency_' + it.id"
+                        [readonly]="isProcessed"
+                        (ngModelChange)="it.currency = (($event || '').toString()).toUpperCase()"
+                      />
+                    </td>
+
+                    <td class="px-3 py-1.5 align-middle">
+                      <input
+                        type="text"
+                        inputmode="decimal"
+                        class="w-full rounded-lg bg-transparent px-3 py-1.5 text-right
+                               font-mono tabular-nums tracking-[0.10em] text-gray-800
+                               ring-1 ring-transparent
+                               hover:bg-white/60 hover:ring-gray-200/60
+                               focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                               disabled:cursor-not-allowed disabled:opacity-70
+                               dark:text-white/90 dark:hover:bg-white/[0.03] dark:hover:ring-white/[0.10] dark:focus:bg-white/[0.03]"
+                        [ngModel]="formatPrice5(it.unitPrice)"
+                        (ngModelChange)="it.unitPrice = parsePrice5($event)"
+                        [ngModelOptions]="{standalone:true}"
+                        [attr.name]="'item_unitPrice_' + it.id"
+                        [readonly]="isProcessed"
+                        placeholder="0.00"
+                      />
+                    </td>
+
+                    <td class="px-2 py-1.5 text-center align-middle">
+                      <span
+                        *ngIf="it.confidence > 0"
+                        class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
+                        [ngClass]="confidenceClass(it.confidence)"
+                      >
+                        {{ it.confidence }}%
+                      </span>
+                      <span *ngIf="it.confidence <= 0" class="text-xs text-gray-300 dark:text-gray-600">—</span>
+                    </td>
+
+                    <td class="px-2 py-1.5 text-center align-middle">
+                      <span
+                        class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                        [ngClass]="itemStatusClass(it.validationStatus)"
+                      >
+                        {{ itemStatusLabel(it.validationStatus) }}
+                      </span>
+                    </td>
+
+                    <td class="px-3 py-1.5 text-right align-middle">
+                      <button
+                        *ngIf="!isProcessed"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/70
+                               ring-1 ring-gray-200/60 hover:bg-rose-50 hover:ring-rose-200
+                               focus:outline-none focus:ring-2 focus:ring-rose-400/30
+                               dark:bg-white/[0.02] dark:ring-white/[0.10] dark:hover:bg-rose-500/10"
+                        (click)="deleteRow(it.id)"
+                        aria-label="Delete row"
+                      >
+                        <span class="text-rose-500 text-base leading-none">×</span>
+                      </button>
+                    </td>
+                  </tr>
+
+                  <tr *ngIf="items.length === 0">
+                    <td colspan="6" class="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                      No items found. Click "Add Row".
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <div class="text-xs text-gray-500 dark:text-gray-400">
+                Rows: <span class="font-semibold text-gray-700 dark:text-gray-200">{{ items.length }}</span>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2" *ngIf="!isProcessed">
+                <button
+                  class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2
+                         text-sm font-semibold shadow-sm
+                         focus:outline-none focus:ring-2 disabled:opacity-50 transition-colors"
+                  [ngClass]="autoFixStatus === 'success'
+                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 focus:ring-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20'
+                    : autoFixStatus === 'error'
+                    ? 'bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100 focus:ring-red-300 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20'
+                    : 'bg-violet-50 text-violet-700 ring-1 ring-violet-200 hover:bg-violet-100 focus:ring-violet-300 dark:bg-violet-500/10 dark:text-violet-400 dark:ring-violet-500/20'"
+                  [disabled]="autoFixing"
+                  (click)="runAutoFix()"
+                >
+                  <svg
+                    *ngIf="autoFixing"
+                    class="h-3.5 w-3.5 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                  </svg>
+
+                  <span *ngIf="!autoFixing && autoFixStatus === 'success'">✓</span>
+                  <span *ngIf="!autoFixing && autoFixStatus === 'error'">✕</span>
+                  <span *ngIf="!autoFixing && autoFixStatus === 'idle'">✦</span>
+
+                  <span>{{
+                    autoFixing ? 'Running AI Fix…' :
+                    autoFixStatus === 'success' ? 'AI Fix Applied' :
+                    autoFixStatus === 'error' ? 'AI Fix Failed' :
+                    'Auto Fix'
+                  }}</span>
+                </button>
+
+                <span
+                  *ngIf="autoFixMsg"
+                  class="text-xs font-medium"
+                  [ngClass]="autoFixStatus === 'success'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-red-600 dark:text-red-400'"
+                >
+                  {{ autoFixMsg }}
+                </span>
+
+                <button
+                  class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm
+                         hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                  (click)="addRow()"
+                >
+                  + Add Row
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- OCR -->
+          <div *ngIf="activeTab === 'ocr'" class="p-3">
+            <div class="mb-2 flex items-center justify-between">
+              <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">Raw OCR Output</div>
+              <div class="text-xs text-gray-400 dark:text-gray-500">Editable for debugging</div>
+            </div>
+            <textarea
+              class="h-[66vh] w-full rounded-2xl border border-gray-200/40 bg-white/80 p-3
+                     font-mono text-sm text-gray-800
+                     focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                     dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white/90"
+              [(ngModel)]="rawOcrText"
+              [readonly]="isProcessed"
+            ></textarea>
+            <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Raw OCR output (editable).</p>
+          </div>
+
+          <!-- PREDICTION -->
+          <div *ngIf="activeTab === 'prediction'" class="p-3">
+            <div class="mb-2 flex items-center justify-between">
+              <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">Prediction Log</div>
+              <div class="text-xs text-gray-400 dark:text-gray-500">{{ predictionLines.length }} tokens</div>
+            </div>
+            <div
+              class="max-h-[66vh] overflow-auto rounded-2xl bg-white/80 ring-1 ring-gray-200/40
+                     dark:bg-white/[0.01] dark:ring-white/[0.06]"
+            >
+              <table class="min-w-full text-sm">
+                <thead
+                  class="sticky top-0 z-10 border-b border-gray-200/50 bg-gray-50/90 backdrop-blur
+                         text-xs text-gray-500 dark:border-white/[0.08] dark:bg-black/20 dark:text-gray-400"
+                >
+                  <tr>
+                    <th class="w-16 px-2.5 py-2 text-center font-semibold">Index</th>
+                    <th class="px-2.5 py-2 text-left font-semibold">Token</th>
+                    <th class="px-2.5 py-2 text-left font-semibold">Label</th>
+                    <th class="w-20 px-2.5 py-2 text-right font-semibold">Confidence</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200/40 bg-transparent dark:divide-white/[0.06]">
+                  <tr
+                    *ngFor="let row of predictionLines; trackBy: trackByIndex"
+                    class="hover:bg-gray-50/50 dark:hover:bg-white/[0.03]"
+                  >
+                    <td class="px-2.5 py-1.5 text-center font-mono text-gray-600 dark:text-gray-400">{{ row.idx }}</td>
+                    <td class="px-2.5 py-1.5 font-mono text-gray-800 dark:text-white/90">{{ row.word }}</td>
+                    <td class="px-2.5 py-1.5">
+                      <span
+                        class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                        [ngClass]="labelClass(row.label)"
+                      >
+                        {{ row.label || 'O' }}
+                      </span>
+                    </td>
+                    <td class="px-2.5 py-1.5 text-right font-mono text-gray-800 dark:text-white/90">
+                      {{ row.confidence }}
+                    </td>
+                  </tr>
+                  <tr *ngIf="predictionLines.length === 0">
+                    <td colspan="4" class="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                      No prediction log available.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- VALIDATION -->
+          <div *ngIf="showValidationTab && activeTab === 'validation'" class="p-3">
+            <div class="mb-2 flex items-center justify-between">
+              <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">Receipt Validation</div>
+              <div class="text-xs text-gray-400 dark:text-gray-500">receipt_validation.validation_json</div>
+            </div>
+            <textarea
+              class="h-[66vh] w-full rounded-2xl border border-gray-200/40 bg-white/80 p-3
+                     font-mono text-sm text-gray-800
+                     focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                     dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white/90"
+              [(ngModel)]="validationJson"
+              [readonly]="isProcessed"
+            ></textarea>
+            <div
+              class="mt-3 rounded-2xl bg-gray-50/70 p-3 text-xs text-gray-500 dark:bg-white/[0.03] dark:text-gray-400"
+            >
+              Tip: Outlier / Name Issue / Price Warn are matched by item_name in validation_json.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="w-1.5 cursor-col-resize bg-gray-200/30 hover:bg-gray-300/50
+             dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+      (pointerdown)="startDrag($event, 'right')"
+      title="Drag to resize"
+    ></div>
+
+    <!-- RIGHT -->
+    <div class="min-w-[260px] max-w-[520px] w-[var(--rightW)] shrink-0 bg-transparent">
+      <div class="p-3">
+        <div
+          class="rounded-2xl bg-white/70 p-4 ring-1 ring-gray-200/40
+                 dark:bg-white/[0.02] dark:ring-white/[0.06]"
+        >
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="text-sm font-semibold text-gray-800 dark:text-white/90">Summary</h3>
+            <span
+              class="rounded-full bg-gray-100/80 px-2.5 py-0.5 text-[11px] font-medium text-gray-500
+                     dark:bg-white/[0.04] dark:text-gray-400"
+            >Auto-calc</span>
+          </div>
+
+          <div class="mt-4 space-y-2.5 text-sm">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-gray-600 dark:text-gray-300">Subtotal</span>
+              <input
+                type="number"
+                inputmode="decimal"
+                class="w-28 rounded-lg border border-gray-200/60 bg-white px-2.5 py-1.5 text-right text-sm
+                       focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                       disabled:cursor-not-allowed disabled:opacity-70
+                       dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-white/90"
+                [(ngModel)]="subtotal"
+                (ngModelChange)="recalcTotal()"
+                [readonly]="isProcessed"
+                min="0"
+                step="0.01"
+              />
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-gray-600 dark:text-gray-300">Tax</span>
+              <input
+                type="number"
+                inputmode="decimal"
+                class="w-28 rounded-lg border border-gray-200/60 bg-white px-2.5 py-1.5 text-right text-sm
+                       focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                       disabled:cursor-not-allowed disabled:opacity-70
+                       dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-white/90"
+                [(ngModel)]="tax"
+                (ngModelChange)="recalcTotal()"
+                [readonly]="isProcessed"
+                min="0"
+                step="0.01"
+              />
+            </div>
+
+            <div class="rounded-xl bg-emerald-50/70 px-3 py-2.5 dark:bg-emerald-500/[0.07]">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-gray-800 dark:text-white/90">Total</span>
+                <span class="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                  {{ formatMoney(total, currency) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 border-t border-gray-200/40 pt-3 dark:border-white/[0.06]">
+            <div class="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+              Vendor Info
+            </div>
+
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center justify-between gap-3">
+                <span class="shrink-0 text-gray-500 dark:text-gray-400">Vendor</span>
+                <input
+                  class="w-44 rounded-lg border border-gray-200/60 bg-white px-2.5 py-1.5 text-right text-sm
+                         focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                         disabled:cursor-not-allowed disabled:opacity-70
+                         dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-white/90"
+                  [(ngModel)]="summary_vendor"
+                  [readonly]="isProcessed"
+                />
+              </div>
+
+              <div class="flex items-center justify-between gap-3">
+                <span class="shrink-0 text-gray-500 dark:text-gray-400">Phone</span>
+                <input
+                  class="w-44 rounded-lg border border-gray-200/60 bg-white px-2.5 py-1.5 text-right text-sm
+                         focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                         disabled:cursor-not-allowed disabled:opacity-70
+                         dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-white/90"
+                  [(ngModel)]="summary_phone"
+                  [readonly]="isProcessed"
+                />
+              </div>
+
+              <div class="flex items-start justify-between gap-3">
+                <span class="shrink-0 pt-2 text-gray-500 dark:text-gray-400">Address</span>
+                <textarea
+                  class="w-44 rounded-lg border border-gray-200/60 bg-white px-2.5 py-1.5 text-right text-sm
+                         focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                         disabled:cursor-not-allowed disabled:opacity-70
+                         dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-white/90"
+                  rows="3"
+                  [(ngModel)]="summary_address"
+                  [readonly]="isProcessed"
+                ></textarea>
+              </div>
+
+              <div class="flex items-center justify-between gap-3">
+                <span class="shrink-0 text-gray-500 dark:text-gray-400">Date</span>
+                <input
+                  class="w-44 rounded-lg border border-gray-200/60 bg-white px-2.5 py-1.5 text-right text-sm
+                         focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                         disabled:cursor-not-allowed disabled:opacity-70
+                         dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-white/90"
+                  [(ngModel)]="summary_receipt_date"
+                  [readonly]="isProcessed"
+                />
+              </div>
+            </div>
+          </div>
+
+          <details class="mt-4 border-t border-gray-200/40 pt-3 dark:border-white/[0.06]">
+            <summary
+              class="flex cursor-pointer select-none list-none items-center gap-1.5
+                     text-[11px] font-semibold uppercase tracking-wide text-gray-400
+                     hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            >
+              <span class="transition-transform [details[open]_&]:rotate-90">▶</span>
+              AI Debug
+            </summary>
+            <div class="mt-2 space-y-1.5 rounded-xl bg-gray-50/70 p-3 text-xs dark:bg-white/[0.03]">
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-500 dark:text-gray-400">AI Review Status</span>
+                <span class="font-mono text-gray-700 dark:text-gray-300">{{ aiReviewStatus || '—' }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-500 dark:text-gray-400">Data Source</span>
+                <span class="font-mono text-gray-700 dark:text-gray-300">{{ dataSource || '—' }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-500 dark:text-gray-400">AI Subtotal</span>
+                <span class="font-mono text-gray-700 dark:text-gray-300">{{ summary_subtotal ?? '—' }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-500 dark:text-gray-400">AI Tax</span>
+                <span class="font-mono text-gray-700 dark:text-gray-300">{{ summary_tax ?? '—' }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-500 dark:text-gray-400">AI Total</span>
+                <span class="font-mono text-gray-700 dark:text-gray-300">{{ summary_total ?? '—' }}</span>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

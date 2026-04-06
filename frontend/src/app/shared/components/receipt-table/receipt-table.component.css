@@ -1,0 +1,17 @@
+/* NEW row corner marker (Excel-style folded corner) */
+tr.new-row {
+  position: relative;
+}
+
+tr.new-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-top: 20px solid #2563eb;      /* blue-600 */
+  border-right: 20px solid transparent;
+  z-index: 10;
+  pointer-events: none;
+}

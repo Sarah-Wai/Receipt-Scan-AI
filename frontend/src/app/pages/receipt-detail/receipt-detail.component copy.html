@@ -1,0 +1,490 @@
+<!-- receipt-detail.component.html (UPDATED: less borders + more table space) -->
+
+<!-- Top utility row -->
+<div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+  <!-- Back to list -->
+  <button class="inline-flex items-center gap-2 rounded-lg bg-white/70 px-3 py-2 text-sm font-medium text-gray-700
+           shadow-sm ring-1 ring-gray-200/50 hover:bg-white/90
+           focus:outline-none focus:ring-2 focus:ring-brand-500/20
+           dark:bg-white/[0.02] dark:text-gray-200 dark:ring-white/[0.08] dark:hover:bg-white/[0.04]" (click)="back()">
+    <span class="text-base leading-none">←</span>
+    <span>Back To List</span>
+  </button>
+
+  <!-- Small status pills (lighter) -->
+  <div class="flex flex-wrap items-center gap-2 text-xs">
+    <span class="rounded-full bg-white/70 px-3 py-1 font-medium text-gray-600
+             ring-1 ring-gray-200/40
+             dark:bg-white/[0.02] dark:text-gray-300 dark:ring-white/[0.08]">
+      Receipt ID:
+      <span class="text-gray-900 dark:text-white/90">{{ receiptId }}</span>
+    </span>
+
+    <span class="rounded-full bg-white/70 px-3 py-1 font-medium text-gray-600
+             ring-1 ring-gray-200/40
+             dark:bg-white/[0.02] dark:text-gray-300 dark:ring-white/[0.08]">
+      Status:
+      <span class="text-gray-900 dark:text-white/90">{{ status }}</span>
+    </span>
+  </div>
+</div>
+
+<!-- Page container (lighter: ring instead of borders everywhere) -->
+<div class="rounded-2xl bg-white/70 p-3 shadow-sm ring-1 ring-gray-200/50
+         dark:bg-white/[0.02] dark:ring-white/[0.06]">
+
+  <!-- Top bar -->
+  <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200/40 pb-3
+           dark:border-white/[0.06]">
+
+    <!-- Left: title + prev/next -->
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Prev -->
+      <button class="inline-flex items-center gap-2 rounded-lg bg-white/70 px-3 py-2 text-sm font-medium text-gray-700
+               shadow-sm ring-1 ring-gray-200/50 hover:bg-white/90
+               focus:outline-none focus:ring-2 focus:ring-brand-500/20
+               disabled:opacity-60
+               dark:bg-white/[0.02] dark:text-gray-200 dark:ring-white/[0.08] dark:hover:bg-white/[0.04]"
+        (click)="prevReceipt()" [disabled]="!canPrev">
+        <span class="text-base leading-none">←</span>
+        <span>Prev</span>
+      </button>
+
+      <div class="min-w-[200px]">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ receiptName }}</h2>
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+          Review items, adjust summary, approve or mark error.
+        </p>
+      </div>
+
+      <!-- Next -->
+      <button class="inline-flex items-center gap-2 rounded-lg bg-white/70 px-3 py-2 text-sm font-medium text-gray-700
+               shadow-sm ring-1 ring-gray-200/50 hover:bg-white/90
+               focus:outline-none focus:ring-2 focus:ring-brand-500/20
+               disabled:opacity-60
+               dark:bg-white/[0.02] dark:text-gray-200 dark:ring-white/[0.08] dark:hover:bg-white/[0.04]"
+        (click)="nextReceipt()" [disabled]="!canNext">
+        <span>Next</span>
+        <span class="text-base leading-none">→</span>
+      </button>
+    </div>
+
+    <!-- Right: actions -->
+    <div class="flex flex-wrap items-center gap-2">
+      <button class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white
+               shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400
+               disabled:opacity-60" [disabled]="approving" (click)="approve()">
+        {{ approving ? 'Approving...' : 'Approve' }}
+      </button>
+
+      <button class="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white
+               shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400
+               disabled:opacity-60" (click)="WrongExtraction()">
+        Failed Extraction
+      </button>
+      <button class="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white
+               shadow-sm hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-400
+               disabled:opacity-60" (click)="ErrorLayout()">
+        Error
+      </button>
+
+      <div class="mx-1 hidden h-8 w-px bg-gray-200/50 dark:bg-white/[0.08] sm:block"></div>
+
+      <button class="inline-flex items-center justify-center rounded-lg bg-white/70 px-4 py-2 text-sm font-medium text-gray-700
+               shadow-sm ring-1 ring-gray-200/50 hover:bg-white/90
+               focus:outline-none focus:ring-2 focus:ring-brand-500/20
+               disabled:opacity-60
+               dark:bg-white/[0.02] dark:text-gray-200 dark:ring-white/[0.08] dark:hover:bg-white/[0.04]"
+        [disabled]="exporting" (click)="exportJson()">
+        Export JSON
+      </button>
+
+      <button class="inline-flex items-center justify-center rounded-lg bg-white/70 px-4 py-2 text-sm font-medium text-gray-700
+               shadow-sm ring-1 ring-gray-200/50 hover:bg-white/90
+               focus:outline-none focus:ring-2 focus:ring-brand-500/20
+               disabled:opacity-60
+               dark:bg-white/[0.02] dark:text-gray-200 dark:ring-white/[0.08] dark:hover:bg-white/[0.04]"
+        [disabled]="exporting" (click)="exportCsv()">
+        Export CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Resizable 3-panel layout -->
+  <div class="mt-3 flex w-full gap-0 overflow-hidden rounded-2xl bg-transparent
+           ring-1 ring-gray-200/40 dark:ring-white/[0.06]" [style.--leftW.px]="leftW" [style.--rightW.px]="rightW">
+    <!-- LEFT: receipt image -->
+    <div class="min-w-[240px] max-w-[560px] w-[var(--leftW)] shrink-0 bg-transparent">
+      <div class="p-3">
+        <div class="rounded-2xl bg-white/70 p-3 ring-1 ring-gray-200/40
+                 dark:bg-white/[0.02] dark:ring-white/[0.06]">
+          <div class="mb-2 flex items-center justify-between">
+            <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">Receipt Image</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+              {{ (zoom * 100) | number : '1.0-0' }}%
+            </div>
+          </div>
+
+          <div class="aspect-[3/5] overflow-auto rounded-2xl bg-white/80 ring-1 ring-gray-200/40
+                   dark:bg-black/20 dark:ring-white/[0.06]">
+            <div class="flex justify-center p-2" [style.transform]="'scale(' + zoom + ')'"
+              [style.transformOrigin]="'top center'">
+              <img [src]="receiptImageUrl" class="block max-w-full h-auto select-none" alt="Receipt image"
+                draggable="false" />
+            </div>
+          </div>
+
+          <div class="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+            <span>Zoom</span>
+
+            <div class="flex items-center gap-2">
+              <button class="flex h-8 w-8 items-center justify-center rounded-md bg-white/70 text-sm
+                       ring-1 ring-gray-200/50 hover:bg-white/90
+                       focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                       disabled:opacity-50
+                       dark:bg-white/[0.02] dark:ring-white/[0.08] dark:hover:bg-white/[0.05]" (click)="zoomOut()"
+                [disabled]="zoom <= minZoom" aria-label="Zoom out">
+                −
+              </button>
+
+              <span class="min-w-[52px] text-center font-medium text-gray-700 dark:text-gray-200">
+                {{ (zoom * 100) | number : '1.0-0' }}%
+              </span>
+
+              <button class="flex h-8 w-8 items-center justify-center rounded-md bg-white/70 text-sm
+                       ring-1 ring-gray-200/50 hover:bg-white/90
+                       focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                       disabled:opacity-50
+                       dark:bg-white/[0.02] dark:ring-white/[0.08] dark:hover:bg-white/[0.05]" (click)="zoomIn()"
+                [disabled]="zoom >= maxZoom" aria-label="Zoom in">
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DRAG HANDLE 1 (thinner + lighter) -->
+    <div class="w-1.5 cursor-col-resize bg-gray-200/30 hover:bg-gray-300/50
+             dark:bg-white/[0.04] dark:hover:bg-white/[0.08]" (pointerdown)="startDrag($event, 'left')"
+      title="Drag to resize"></div>
+
+    <!-- MIDDLE: tabs/table -->
+    <div class="min-w-[420px] flex-1 bg-transparent overflow-hidden">
+      <div class="p-3">
+        <div class="rounded-2xl bg-white/70 ring-1 ring-gray-200/40
+                 dark:bg-white/[0.02] dark:ring-white/[0.06]">
+
+          <!-- Tabs -->
+          <div
+            class="flex items-center justify-between border-b border-gray-200/40 px-4 py-2.5 dark:border-white/[0.06]">
+            <div class="flex gap-4">
+              <button class="text-sm font-semibold" [ngClass]="activeTab === 'items'
+                  ? 'text-brand-600 border-b-2 border-brand-500 pb-2'
+                  : 'text-gray-500 dark:text-gray-400 pb-2'" (click)="activeTab='items'">
+                Items
+              </button>
+
+              <button class="text-sm font-semibold" [ngClass]="activeTab === 'ocr'
+                  ? 'text-brand-600 border-b-2 border-brand-500 pb-2'
+                  : 'text-gray-500 dark:text-gray-400 pb-2'" (click)="activeTab='ocr'">
+                Raw OCR
+              </button>
+
+              <button class="text-sm font-semibold" [ngClass]="activeTab === 'prediction'
+    ? 'text-brand-600 border-b-2 border-brand-500 pb-2'
+    : 'text-gray-500 dark:text-gray-400 pb-2'" (click)="activeTab='prediction'">
+                Model Predictions
+              </button>
+
+              <button class="text-sm font-semibold" [ngClass]="activeTab === 'validation'
+                  ? 'text-brand-600 border-b-2 border-brand-500 pb-2'
+                  : 'text-gray-500 dark:text-gray-400 pb-2'" (click)="activeTab='validation'">
+                Validation
+              </button>
+            </div>
+
+            <div class="hidden text-xs text-gray-500 dark:text-gray-400 sm:block">
+              Tip: edit fields; totals update automatically.
+            </div>
+          </div>
+
+          <!-- Items tab (scrollable area so table gets space) -->
+          <div *ngIf="activeTab==='items'" class="p-3">
+            <div class="max-h-[66vh] overflow-auto rounded-2xl bg-white/80 dark:bg-white/[0.01]">
+              <table class="min-w-full text-sm">
+                <thead class="sticky top-0 z-10 bg-gray-50/90 backdrop-blur text-xs text-gray-500
+                         dark:bg-black/20 dark:text-gray-400">
+                  <tr>
+                    <th class="py-2 px-2.5 text-left font-semibold">Item Name</th>
+                    <th class="py-2 px-2.5 text-left font-semibold">Currency</th>
+                    <th class="py-2 px-2.5 text-left font-semibold">Unit Price</th>
+                    <th class="py-2 px-2.5 text-left font-semibold">Conf.</th>
+                    <th class="py-2 px-2.5 text-left font-semibold">Validation</th>
+                    <th class="py-2 px-2.5 text-right font-semibold">Action</th>
+                  </tr>
+                </thead>
+
+                <tbody class="divide-y divide-gray-200/40 bg-transparent dark:divide-white/[0.06]">
+                  <tr *ngFor="let it of items; let i = index; trackBy: trackByItemId"
+                    class="hover:bg-gray-50/50 dark:hover:bg-white/[0.03]">
+
+                    <!-- editable name -->
+                    <td class="py-1.5 px-2.5">
+                      <input class="w-full rounded-lg border border-gray-200/60 bg-white px-2.5 py-1.5 text-sm text-gray-800
+                               focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                               dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-white/90" [(ngModel)]="it.name"
+                        [ngModelOptions]="{ standalone: true }" [attr.name]="'item_name_' + it.id"
+                        placeholder="Item name" />
+                    </td>
+
+                    <!-- currency -->
+                    <td class="py-1.5 px-2.5">
+                      <input type="text" maxlength="3" class="w-20 rounded-lg border border-gray-200/60 bg-white px-2.5 py-1.5 text-center text-sm uppercase text-gray-800
+                               focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                               dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-white/90"
+                        [(ngModel)]="it.currency" [ngModelOptions]="{ standalone: true }"
+                        [attr.name]="'item_currency_' + it.id"
+                        (ngModelChange)="it.currency = (($event || '').toString()).toUpperCase()" />
+                    </td>
+
+                    <!-- price -->
+                    <td class="py-1.5 px-2.5">
+                      <input type="number" step="0.01" class="w-full rounded-lg border border-gray-200/60 bg-white px-2.5 py-1.5 text-right text-sm text-gray-800
+                               focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                               dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-white/90"
+                        [(ngModel)]="it.unitPrice" [ngModelOptions]="{ standalone: true }"
+                        [attr.name]="'item_unitPrice_' + it.id" />
+                    </td>
+
+                    <!-- confidence badge -->
+                    <td class="py-1.5 px-2.5">
+                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                        [ngClass]="confidenceClass(it.confidence)">
+                        {{ it.confidence }}%
+                      </span>
+                    </td>
+
+                    <!-- validation status -->
+                    <td class="py-1.5 px-2.5">
+                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                        [ngClass]="itemStatusClass(it.validationStatus)">
+                        {{ itemStatusLabel(it.validationStatus) }}
+                      </span>
+                    </td>
+
+                    <!-- delete -->
+                    <td class="py-1.5 px-2.5 text-right">
+                      <button class="rounded-lg bg-white/70 px-3 py-1.5 text-xs font-semibold text-rose-600
+                               ring-1 ring-rose-200/70 hover:bg-rose-50
+                               focus:outline-none focus:ring-2 focus:ring-rose-400/30
+                               dark:bg-white/[0.02] dark:ring-rose-500/30 dark:hover:bg-rose-500/10"
+                        (click)="deleteRow(it.id)">
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+
+                  <tr *ngIf="items.length === 0">
+                    <td colspan="6" class="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                      No items found. Click “Add Row”.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <div class="text-xs text-gray-500 dark:text-gray-400">
+                Rows: <span class="font-medium text-gray-700 dark:text-gray-200">{{ items.length }}</span>
+              </div>
+
+              <button class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm
+                       hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/30" (click)="addRow()">
+                Add Row
+              </button>
+            </div>
+          </div>
+
+          <!-- Raw OCR tab -->
+          <div *ngIf="activeTab==='ocr'" class="p-3">
+            <div class="mb-2 flex items-center justify-between">
+              <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">Raw OCR Output</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">Editable for debugging</div>
+            </div>
+
+            <textarea class="h-[66vh] w-full rounded-2xl border border-gray-200/40 bg-white/80 p-3 font-mono text-sm text-gray-800
+                     focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                     dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white/90"
+              [(ngModel)]="rawOcrText"></textarea>
+
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Raw OCR output (editable).
+            </p>
+          </div>
+
+          <div *ngIf="activeTab === 'prediction'" class="p-3">
+            <div class="mb-2 flex items-center justify-between">
+              <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">Prediction Log</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">From receipt_prediction.prediction_log ({{ predictionLines.length }} tokens)</div>
+            </div>
+
+            <div class="max-h-[66vh] overflow-auto rounded-2xl bg-white/80 dark:bg-white/[0.01]">
+              <table class="min-w-full text-sm">
+                <thead class="sticky top-0 z-10 bg-gray-50/90 backdrop-blur text-xs text-gray-500
+                         dark:bg-black/20 dark:text-gray-400">
+                  <tr>
+                    <th class="py-2 px-2.5 text-center font-semibold w-16">Index</th>
+                    <th class="py-2 px-2.5 text-left font-semibold">Token</th>
+                    <th class="py-2 px-2.5 text-left font-semibold">Label</th>
+                    <th class="py-2 px-2.5 text-right font-semibold w-20">Confidence</th>
+                  </tr>
+                </thead>
+
+                <tbody class="divide-y divide-gray-200/40 bg-transparent dark:divide-white/[0.06]">
+                  <tr *ngFor="let row of predictionLines; trackBy: trackByIndex"
+                    class="hover:bg-gray-50/50 dark:hover:bg-white/[0.03]">
+
+                    <!-- index -->
+                    <td class="py-1.5 px-2.5 text-center font-mono text-gray-600 dark:text-gray-400">
+                      {{ row.idx }}
+                    </td>
+
+                    <!-- token -->
+                    <td class="py-1.5 px-2.5 font-mono text-gray-800 dark:text-white/90">
+                      {{ row.word }}
+                    </td>
+
+                    <!-- label -->
+                    <td class="py-1.5 px-2.5">
+                      <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
+                        [ngClass]="labelClass(row.label)">
+                        {{ row.label || 'O' }}
+                      </span>
+                    </td>
+
+                    <!-- confidence -->
+                    <td class="py-1.5 px-2.5 text-right font-mono text-gray-800 dark:text-white/90">
+                      {{ row.confidence }}
+                    </td>
+                  </tr>
+
+                  <tr *ngIf="predictionLines.length === 0">
+                    <td colspan="4" class="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                      No prediction log available.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Validation tab -->
+          <div *ngIf="activeTab==='validation'" class="p-3">
+            <div class="mb-2 flex items-center justify-between">
+              <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">Receipt Validation</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">From receipt_validation.validation_json</div>
+            </div>
+
+            <textarea class="h-[66vh] w-full rounded-2xl border border-gray-200/40 bg-white/80 p-3 font-mono text-sm text-gray-800
+                     focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                     dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-white/90"
+              [(ngModel)]="validationJson"></textarea>
+
+            <div
+              class="mt-3 rounded-2xl bg-gray-50/70 p-4 text-xs text-gray-600 dark:bg-white/[0.03] dark:text-gray-300">
+              Tip: Outlier / Name Issue / Price Warn are matched by item_name in validation_json.
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- DRAG HANDLE 2 -->
+    <div class="w-1.5 cursor-col-resize bg-gray-200/30 hover:bg-gray-300/50
+             dark:bg-white/[0.04] dark:hover:bg-white/[0.08]" (pointerdown)="startDrag($event, 'right')"
+      title="Drag to resize"></div>
+
+    <!-- RIGHT: summary -->
+    <div class="min-w-[260px] max-w-[560px] w-[var(--rightW)] shrink-0 bg-transparent">
+      <div class="p-3">
+        <div class="rounded-2xl bg-white/70 p-4 ring-1 ring-gray-200/40
+                 dark:bg-white/[0.02] dark:ring-white/[0.06]">
+          <div class="flex items-start justify-between gap-2">
+            <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">Summary</h3>
+            <div
+              class="rounded-full bg-gray-50/70 px-3 py-1 text-xs font-medium text-gray-500 dark:bg-white/[0.03] dark:text-gray-400">
+              Auto-calc
+            </div>
+          </div>
+
+          <div class="mt-4 space-y-3 text-sm">
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-gray-600 dark:text-gray-300">Subtotal</span>
+
+              <input type="number" inputmode="decimal" class="w-32 rounded-lg border border-gray-200/60 bg-white px-3 py-1.5 text-right text-sm
+                       focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                       dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-white/90" [(ngModel)]="subtotal"
+                (ngModelChange)="recalcTotal()" min="0" step="0.01" />
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-gray-600 dark:text-gray-300">Tax</span>
+
+              <input type="number" inputmode="decimal" class="w-32 rounded-lg border border-gray-200/60 bg-white px-3 py-1.5 text-right text-sm
+                       focus:outline-none focus:ring-2 focus:ring-brand-500/20
+                       dark:border-white/[0.10] dark:bg-white/[0.03] dark:text-white/90" [(ngModel)]="tax"
+                (ngModelChange)="recalcTotal()" min="0" step="0.01" />
+            </div>
+
+            <div class="rounded-2xl bg-gray-50/70 p-3 text-sm dark:bg-white/[0.03]">
+              <div class="flex items-center justify-between">
+                <span class="font-semibold text-gray-800 dark:text-white/90">Total</span>
+                <span class="font-semibold text-gray-900 dark:text-white/90">
+                  {{ formatMoney(total, currency) }}
+                </span>
+              </div>
+            </div>
+            <!--  Summary Fields -->
+            <div class="mt-3">
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-600 dark:text-gray-300">Sorie Subtotal</span>
+                <span class="text-sm text-gray-800 dark:text-white/90">{{ summary_subtotal }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-600 dark:text-gray-300">Sorie Tax</span>
+                <span class="text-sm text-gray-800 dark:text-white/90">{{ summary_tax }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-600 dark:text-gray-300">Sorie Total</span>
+                <span class="text-sm text-gray-800 dark:text-white/90">{{ summary_total }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-600 dark:text-gray-300">Vendor</span>
+                <span class="text-sm text-gray-800 dark:text-white/90">{{ summary_vendor }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-600 dark:text-gray-300">Phone</span>
+                <span class="text-sm text-gray-800 dark:text-white/90">{{ summary_phone }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-600 dark:text-gray-300">Address</span>
+                <span class="text-sm text-gray-800 dark:text-white/90">{{ summary_address }}</span>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-gray-600 dark:text-gray-300">Receipt Date</span>
+                <span class="text-sm text-gray-800 dark:text-white/90">{{ summary_receipt_date }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 rounded-2xl bg-gray-50/70 p-3 text-xs text-gray-500 dark:bg-white/[0.03] dark:text-gray-400">
+            Tip: Edit items to correct OCR mistakes. Summary updates automatically.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

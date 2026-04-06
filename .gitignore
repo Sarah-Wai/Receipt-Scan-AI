@@ -1,0 +1,37 @@
+# Python env
+ocr_env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# System
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Env
+.env
+
+# Generated / uploads / db
+backend/data/uploads/
+backend/data/processed/
+backend/data/raw/
+*.db
+*.sqlite
+*.sqlite3
+
+# Models
+backend/models/
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.bin
+
+# Angular / Node
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.cache/
