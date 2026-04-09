@@ -1,24 +1,134 @@
-<div class="grid grid-cols-12 gap-4 md:gap-6">
-  <div class="col-span-12 space-y-6 xl:col-span-7">
-    <div><app-ecommerce-metrics /></div>
+<div class="dashboard">
 
-    <div><app-monthly-sales-chart /></div>
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div>
+      <h1 class="topbar-title">Receipt Scan AI</h1>
+      <p class="topbar-sub">Overview · {{ currentMonth }}</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-outline" (click)="uploadReceipt()">
+        <span>↑</span> Upload
+      </button> &nbsp; &nbsp;
+      <button class="btn-primary" (click)="reviewPending()">
+        Review pending
+        <span class="badge-count" *ngIf="pendingReviewCount > 0">{{ pendingReviewCount }}</span>
+      </button>
+    </div>
   </div>
 
-  <div class="col-span-12 xl:col-span-5">
-    <app-monthly-target />
+  <!-- Error -->
+  <div class="error-banner" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+  <!-- Loading -->
+  <div class="loading-row" *ngIf="loading">
+    <span class="loading-text">Loading dashboard…</span>
   </div>
 
-  <div class="col-span-12">
-    <app-statics-chart />
+  <!-- Dashboard content — always rendered so @ViewChild canvas refs exist in DOM -->
+  <div [class.hidden]="loading || !!errorMsg">
+
+    <!-- Metric Cards -->
+    <div class="metric-grid" style="margin-bottom: 1rem;">
+      <div class="metric-card" *ngFor="let m of metricCards">
+        <p class="metric-label">{{ m.label }}</p>
+        <p class="metric-value">{{ m.value }}</p>
+        <span class="metric-badge" [ngClass]="'badge-' + m.badgeType">{{ m.badge }}</span>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+
+      <div class="card chart-card">
+        <div class="card-header">
+          <p class="card-title">Monthly spend</p>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-dot blue"></span>Spend (CAD)</span>
+            <span class="legend-item"><span class="legend-dot teal"></span>Receipts</span>
+          </div>
+        </div>
+        <div style="position: relative; width: 100%; height: 200px;">
+          <canvas #spendChart role="img" aria-label="Bar chart of monthly spend"></canvas>
+        </div>
+      </div>
+
+      <div class="card pipeline-card">
+        <p class="card-title">Extraction pipeline</p>
+        <div class="pipeline-row" *ngFor="let p of pipelineRows">
+          <span class="pipeline-label">{{ p.label }}</span>
+          <div class="bar-track">
+            <div class="bar-fill" [style.width.%]="p.pct" [style.background]="p.color"></div>
+          </div>
+          <span class="pipeline-val">{{ p.pct }}%</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Row -->
+    <div class="bottom-row">
+
+      <div class="card receipts-card">
+        <div class="card-header">
+          <p class="card-title">Recent receipts</p>
+          <button class="btn-link" (click)="viewAll()">View all →</button>
+        </div>
+        <div class="receipt-list">
+          <div
+            class="receipt-row"
+            *ngFor="let r of recentReceipts"
+            (click)="openReceipt(r.receipt_id)"
+          >
+            <div class="vendor-dot" [ngClass]="r.colorClass">{{ r.initials }}</div>
+            <div class="receipt-info">
+              <span class="r-vendor">{{ r.vendor || 'Unknown vendor' }}</span>
+              <span class="r-date">{{ r.receipt_date | date:'MMM d' }}</span>
+            </div>
+            <span class="r-total">{{ formatMoney(r.total) }}</span>
+            <span class="pill" [ngClass]="statusPill(r.ai_review_status)">
+              {{ statusLabel(r.ai_review_status) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card flags-card">
+        <p class="card-title">Validation flags</p>
+        <div class="flag-row" *ngFor="let f of validationFlags">
+          <span class="flag-label">{{ f.label }}</span>
+          <span class="flag-count" [ngClass]="'text-' + f.severity">{{ f.count }}</span>
+        </div>
+        <button class="btn-outline full-width" style="margin-top: 16px;" (click)="resolveFlags()">
+          Resolve flags →
+        </button>
+      </div>
+
+      <div class="card activity-card">
+        <p class="card-title">Recent activity</p>
+        <div class="activity-row" *ngFor="let a of activityFeed">
+          <div class="activity-icon" [ngClass]="'act-' + a.type">{{ a.icon }}</div>
+          <span class="activity-text" [innerHTML]="a.text"></span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Confidence Distribution -->
+    <div class="card conf-card" style="margin-top: 1rem;">
+      <div class="card-header">
+        <p class="card-title">Confidence distribution</p>
+        <span class="card-sub">Per extraction source</span>
+      </div>
+      <div style="position: relative; width: 100%; height: 160px;">
+        <canvas #confChart role="img" aria-label="Confidence distribution by extraction source"></canvas>
+      </div>
+      <div class="legend" style="margin-top: 10px;">
+        <span class="legend-item"><span class="legend-dot blue"></span>OCR only</span>
+        <span class="legend-item"><span class="legend-dot purple"></span>OCR + LLM</span>
+      </div>
+    </div>
+
   </div>
 
-
-  <div class="col-span-12 xl:col-span-12">
-    <app-recent-orders/>
-  </div>
-</div>
-
-<div class="bg-red-500 text-white p-4 rounded-lg">
-  Tailwind test
 </div>

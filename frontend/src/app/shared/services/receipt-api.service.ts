@@ -179,6 +179,51 @@ export interface ApiProcessResponse {
   };
 }
 
+/* =========================
+   Dashboard API types
+   ========================= */
+ 
+export interface DashboardSummary {
+  total_receipts:  number;
+  total_spend:     number;
+  avg_confidence:  number;
+  vendor_count:    number;
+  pending_review:  number;
+  approved_count:  number;
+  rejected_count:  number;
+  ocr_only_count:  number;
+  ocr_llm_count:   number;
+  failed_count:    number;
+  new_this_week:   number;
+  flagged_items:   number;
+}
+ 
+export interface DashboardValidationSummary {
+  price_outliers:       number;
+  subtotal_mismatch:    number;
+  name_quality_issues:  number;
+  price_range_warnings: number;
+  low_confidence_items: number;
+  missing_vendor:       number;
+}
+ 
+export interface DashboardMonthlyPoint {
+  month: string;
+  spend: number;
+  count: number;
+}
+ 
+export interface DashboardConfidenceDistribution {
+  ocr: number[];  // [high, medium, low]
+  llm: number[];  // [high, medium, low]
+}
+ 
+export interface DashboardActivityItem {
+  type: 'upload' | 'llm' | 'flag' | 'reject';
+  icon: string;
+  text: string;
+}
+
 @Injectable({ providedIn: "root" })
 export class ReceiptApiService {
   private baseUrl = "http://localhost:8000/api";
@@ -362,5 +407,29 @@ export class ReceiptApiService {
     } catch {
       return value;
     }
+  }
+
+  // =========================
+  // Dashboard endpoints
+  // =========================
+ 
+  getDashboardSummary(): Observable<DashboardSummary> {
+    return this.http.get<DashboardSummary>(`${this.baseUrl}/dashboard/summary`);
+  }
+ 
+  getDashboardValidationSummary(): Observable<DashboardValidationSummary> {
+    return this.http.get<DashboardValidationSummary>(`${this.baseUrl}/dashboard/validation-summary`);
+  }
+ 
+  getDashboardMonthlyTrend(): Observable<DashboardMonthlyPoint[]> {
+    return this.http.get<DashboardMonthlyPoint[]>(`${this.baseUrl}/dashboard/monthly-trend`);
+  }
+ 
+  getDashboardConfidenceDistribution(): Observable<DashboardConfidenceDistribution> {
+    return this.http.get<DashboardConfidenceDistribution>(`${this.baseUrl}/dashboard/confidence-distribution`);
+  }
+ 
+  getDashboardActivity(): Observable<DashboardActivityItem[]> {
+    return this.http.get<DashboardActivityItem[]>(`${this.baseUrl}/dashboard/activity`);
   }
 }

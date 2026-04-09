@@ -17,6 +17,7 @@ from api.routes_process import router as process_router
 from api.routes_auto_fix import router as auto_fix_router
 from api.routes_llm import router as llm_router
 from api.routes_approve import router as approve_router
+from api.routes_dashboard import router as approve_dashboard_router
 
 app = FastAPI(title="FinScanAI API")
 
@@ -49,3 +50,4 @@ app.include_router(process_router)
 app.include_router(auto_fix_router)
 app.include_router(llm_router)
 app.include_router(approve_router)
+app.include_router(approve_dashboard_router)
