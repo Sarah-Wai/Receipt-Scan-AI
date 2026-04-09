@@ -41,7 +41,7 @@ def process_receipt(receipt_id: int, payload: ProcessReceiptRequest):
     try:
         job_id = payload.job_id.strip()
         print("Job ID:", job_id)
-        
+
         if not job_id:
             raise HTTPException(status_code=400, detail="job_id is required")
 
@@ -80,10 +80,6 @@ def process_receipt(receipt_id: int, payload: ProcessReceiptRequest):
                 detail=result.error or "Receipt pipeline failed",
             )
 
-        # ── Save extraction results to SQLite and get the real PK ─────────────
-        # FIX: the URL receipt_id is a frontend-generated timestamp, not a DB
-        # PK. We must save the extraction output to SQLite here and use the
-        # integer PK that save_geo_fusion_to_sqlite() returns.
         extraction_results = result.final_output.get("extraction_results", {})
         results_list = extraction_results.get("results", [])
 
@@ -96,14 +92,25 @@ def process_receipt(receipt_id: int, payload: ProcessReceiptRequest):
             with sqlite3.connect(str(DB_PATH)) as conn:
                 conn.execute("PRAGMA foreign_keys = ON;")
 
-                for item in results_list:
+                for idx, item in enumerate(results_list):
                     geo_result        = item.get("geo_result") or {}
                     validation_report = item.get("validation_report") or {}
 
-                    # Use job_id as source_id so re-processing the same job
-                    # upserts rather than inserting a duplicate row.
-                    if not geo_result.get("id"):
-                        geo_result["id"] = job_id
+                    # FIX: always build a job-scoped source_id regardless of
+                    # what the pipeline set in geo_result["id"].
+                    # geo_result["id"] is just the filename stem (e.g.
+                    # "RSCAN-000001") which is identical across every upload,
+                    # causing every new receipt to overwrite the previous one.
+                    # Prefixing with job_id makes it globally unique.
+                    raw_image_id = (
+                        geo_result.get("id")
+                        or geo_result.get("source_id")
+                        or item.get("image_path", "")
+                    )
+                    image_stem = Path(str(raw_image_id)).stem if raw_image_id else f"img-{idx}"
+                    geo_result["id"]        = f"{job_id}-{image_stem}"
+                    geo_result["source_id"] = f"{job_id}-{image_stem}"
+                    geo_result["job_id"]    = job_id
 
                     sroie = geo_result.get("sroie_fields") or {}
                     summary_report_dict = {
@@ -135,12 +142,12 @@ def process_receipt(receipt_id: int, payload: ProcessReceiptRequest):
         if real_receipt_id is None:
             real_receipt_id = result.final_output.get("receipt_id")
 
-        # Last resort: look up by source_id (job_id)
+        # Last resort: look up by source_id (job_id-scoped)
         if real_receipt_id is None:
             with get_conn() as conn:
                 row = conn.execute(
-                    "SELECT receipt_id FROM receipts WHERE source_id = ?",
-                    (job_id,),
+                    "SELECT receipt_id FROM receipts WHERE source_id LIKE ?",
+                    (f"{job_id}%",),
                 ).fetchone()
             if row:
                 real_receipt_id = int(row[0])
@@ -156,8 +163,6 @@ def process_receipt(receipt_id: int, payload: ProcessReceiptRequest):
 
         return {
             "ok":         True,
-            # FIX: real SQLite PK — frontend must use THIS for all subsequent
-            # calls (/autofix-llm, GET /api/receipts/{receipt_id}, etc.)
             "receipt_id": real_receipt_id,
             "job_id":     job_id,
             "result":     result.to_dict(),

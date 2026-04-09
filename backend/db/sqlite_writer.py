@@ -520,8 +520,11 @@ def save_geo_fusion_to_sqlite(
             ),
         )
 
-    conn.execute("DELETE FROM receipt_items WHERE receipt_id = ?", (receipt_id,))
-
+    # FIX: resolve items FIRST, then conditionally delete-and-replace.
+    # The old code had `if items:` before `items` was assigned, causing
+    # UnboundLocalError. Also, only delete existing items when new ones
+    # are actually coming in — prevents wiping items on a re-process that
+    # returns no line items.
     outlier_keys = build_outlier_keyset(validation_report or {})
     items: List[Dict[str, Any]] = (
         out.get("ITEMS")
@@ -532,6 +535,9 @@ def save_geo_fusion_to_sqlite(
     )
 
     print(f"save_geo_fusion_to_sqlite: items_count={len(items)}")
+
+    if items:
+        conn.execute("DELETE FROM receipt_items WHERE receipt_id = ?", (receipt_id,))
 
     thr100 = min_confidence_filter * 100.0
 
@@ -610,7 +616,6 @@ def save_geo_fusion_to_sqlite(
         )
 
     return receipt_id
-
 
 def save_receipt_payload(
     conn: sqlite3.Connection,

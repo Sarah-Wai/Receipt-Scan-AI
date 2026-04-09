@@ -154,7 +154,7 @@ export class ReceiptDetailComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private receiptApi: ReceiptApiService,
-  ) {}
+  ) { }
 
   ngOnInit() {
     const st = (history.state ?? {}) as any;
@@ -282,9 +282,11 @@ export class ReceiptDetailComponent implements OnInit, OnDestroy {
         this.llmUsed = !!detail.llmUsed;
 
         this.rawOcrText = detail.ocrJson
-          ? JSON.stringify(detail.ocrJson["ocr_text"] ?? detail.ocrJson, null, 2)
+          ? (detail.ocrJson["ocr_text"] ?? detail.ocrJson)
+            .rows
+            .map((row: any) => row.text)
+            .join("\n")
           : "No OCR JSON data";
-
         const log = parsePredictionLog(detail.predictionLogJson);
         this.predictionLines = buildSamplePredictionLines(log);
         this.showPredictions = this.predictionLines.length > 0;
