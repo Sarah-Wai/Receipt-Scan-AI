@@ -1,7 +1,11 @@
-# Python env
-ocr_env/
+# Secrets / API keys
+.env
+.env.*
+backend/config.py
+backend/llm/test_groq.py
 
-# Python cache
+# Python
+ocr_env/
 __pycache__/
 *.pyc
 
@@ -11,10 +15,7 @@ __pycache__/
 # VS Code
 .vscode/
 
-# Env
-.env
-
-# Generated / uploads / db
+# Data / uploads
 backend/data/uploads/
 backend/data/processed/
 backend/data/raw/
@@ -28,9 +29,8 @@ backend/models/
 *.pth
 *.onnx
 *.safetensors
-*.bin
 
-# Angular / Node
+# Angular
 frontend/node_modules/
 frontend/dist/
 frontend/.angular/
